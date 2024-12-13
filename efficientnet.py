@@ -15,7 +15,7 @@ class EfficientNetBinaryClassifier(pl.LightningModule):
 
         # Load EfficientNet B0 pre-trained on ImageNet
         # self.model = models.efficientnet_b0(pretrained=True)
-        self.model = models.efficientnet_b7(pretrained=True)
+        self.model = models.efficientnet_b2(pretrained=True)
         
         # Replace the classifier head
         self.model.classifier[1] = nn.Linear(self.model.classifier[1].in_features, num_classes)
@@ -54,7 +54,12 @@ class EfficientNetBinaryClassifier(pl.LightningModule):
 data_transforms = {
     'train': transforms.Compose([
         transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(),
+        # transforms.RandomRotation(degrees=20),
+        transforms.RandomAffine(
+            degrees=15,                # No rotation
+            translate=(0.2, 0.2)      # Allow up to 20% shift in both x and y directions
+        ),
+        transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),  # Randomly crop and resize with zoom range
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
@@ -83,7 +88,7 @@ data_transforms = {
 # Set up a TensorBoard logger
 if __name__ == '__main__':
     
-    logger = TensorBoardLogger("tb_logs", name="efficientnet_b7")
+    logger = TensorBoardLogger("tb_logs", name="mobilenet_v2_2")
     train_dataset = datasets.ImageFolder(root='img2/train', transform=data_transforms['train'])
     val_dataset = datasets.ImageFolder(root='img2/test', transform=data_transforms['val'])
 
@@ -96,7 +101,7 @@ if __name__ == '__main__':
     # Set up the Trainer
     trainer = pl.Trainer(
         logger=logger,
-        max_epochs=30,
+        max_epochs=20,
         accelerator='gpu',  # Use GPU if available
         devices=1
 
@@ -105,4 +110,4 @@ if __name__ == '__main__':
     # Train the model
     trainer.fit(model, train_loader, val_loader)
     #save
-    torch.save(model.state_dict(), 'modeleb7.pth')
+    torch.save(model.state_dict(), 'model.pth')
