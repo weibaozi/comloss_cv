@@ -101,7 +101,7 @@ if __name__ == '__main__':
     # Set up the Trainer
     trainer = pl.Trainer(
         logger=logger,
-        max_epochs=30,
+        max_epochs=25,
         accelerator='gpu',  # Use GPU if available
         devices=1
 
