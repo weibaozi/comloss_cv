@@ -33,7 +33,7 @@ model.to(device)
 
 
 # Run inference on a few images and record time
-num_images = 5  # Number of images to run inference on
+num_images = 10  # Number of images to run inference on
 times = []  # List to store inference times
 outputs = []  # Store model outputs for each image
 

@@ -15,8 +15,8 @@ def image_callback(msg,model):
         output = model.predict(cv_image)
         print(output.sigmoid())
         # Display the image
-        # cv2.imshow("Image Subscriber", cv_image)
-        # cv2.waitKey(1)
+        cv2.imshow("Image Subscriber", cv_image)
+        cv2.waitKey(1)
     except CvBridgeError as e:
         rospy.logerr(f"Error converting ROS Image to OpenCV: {e}")
 
@@ -26,7 +26,7 @@ def main():
     rospy.init_node('image_subscriber', anonymous=True)
     
     # Subscribe to the image topic (replace '/camera/image' with your topic)
-    image_topic = "/jhu_daVinci/left/image_rect_color"
+    image_topic = "/jhu_daVinci/left/image_raw"
     rospy.Subscriber(image_topic, Image, lambda msg: image_callback(msg, mymodel))
 
     # Keep the node running
