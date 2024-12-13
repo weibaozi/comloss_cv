@@ -54,7 +54,12 @@ class EfficientNetBinaryClassifier(pl.LightningModule):
 data_transforms = {
     'train': transforms.Compose([
         transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(),
+        # transforms.RandomRotation(degrees=20),
+        transforms.RandomAffine(
+            degrees=15,                # No rotation
+            translate=(0.2, 0.2)      # Allow up to 20% shift in both x and y directions
+        ),
+        transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),  # Randomly crop and resize with zoom range
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
