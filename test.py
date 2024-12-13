@@ -13,7 +13,7 @@ def image_callback(msg,model):
         cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         #print image shape
         output = model.predict(cv_image)
-        print(output.sigmoid())
+        print((output.sigmoid() > 0.5).int())
         # Display the image
         cv2.imshow("Image Subscriber", cv_image)
         cv2.waitKey(1)
