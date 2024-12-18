@@ -1,60 +1,68 @@
-#!/usr/bin/env python
+import torch
+from torch.utils.data import DataLoader
+from torchvision import transforms, datasets
+from time import time
+from mobilenet_v2 import EfficientNetBinaryClassifier  # Ensure you have this model script available
 
-import rospy
-from sensor_msgs.msg import Image
-from std_msgs.msg import Bool
-from cv_bridge import CvBridge, CvBridgeError
-import cv2
-from model import myModel
-from collections import deque
+# Set device to CPU for inference
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 
-def image_callback(msg,model,state_queue):
-    """Callback function to process the image."""
-    bridge = CvBridge()
-    try:
-        # Convert the ROS Image message to a CV image
-        cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        #print image shape
-        output = model.predict(cv_image)
-        print((output.sigmoid() > 0.5).int())
-        state_queue.popleft()
-        if (output.sigmoid() > 0.5).int() == 1:
-            state_queue.append(1)
-        else:
-            state_queue.append(0)
-        # Display the image
-        # cv2.imshow("Image Subscriber", cv_image)
-        # cv2.waitKey(1)
-    except CvBridgeError as e:
-        rospy.logerr(f"Error converting ROS Image to OpenCV: {e}")
 
-def main():
-    model_path = 'model.pth'
-    mymodel=myModel(model_path, 'cpu')
-    rospy.init_node('image_subscriber', anonymous=True)
-    pub = rospy.Publisher('peg_visibility', Bool, queue_size=1)
-    state_queue = deque([0]*4)
-    # rospy.init_node('peg_toggle', anonymous=True)
-    
-    # Subscribe to the image topic (replace '/camera/image' with your topic)
-    image_topic = "/jhu_daVinci/left/image_raw"
-    rospy.Subscriber(image_topic, Image, lambda msg: image_callback(msg, mymodel, state_queue))
+# Define data transformations (same as used during training)
+data_transforms = {
+    'val': transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+}
 
-    # Keep the node running
-    # rospy.spin()
+# Load the validation dataset
+val_dataset = datasets.ImageFolder(root='img2/test', transform=data_transforms['val'])
+val_loader = DataLoader(val_dataset, batch_size=1, shuffle=True)  # Single image per batch for testing
 
-    # Cleanup
-    # cv2.destroyAllWindows()
-    rate=rospy.Rate(5)
-    while not rospy.is_shutdown():
-        # print(state_queue)
-        # print(sum(state_queue))
-        if sum(state_queue) >= 3:
-            pub.publish(Bool(True))
-            print('peg detected')
-        else:
-            pub.publish(Bool(False))
-        rate.sleep()
+# Load the trained model
+checkpoint = torch.load('model.pth', map_location=device)
+print("loaded model")
+model = EfficientNetBinaryClassifier()
+model.load_state_dict(checkpoint)
+# model.to(device)  # Load the model onto the CPU
+model.eval()  # Set model to evaluation mode
+model.to(device)
 
-if __name__ == '__main__':
-    main()
+
+# Run inference on a few images and record time
+num_images = 10  # Number of images to run inference on
+times = []  # List to store inference times
+outputs = []  # Store model outputs for each image
+
+with torch.no_grad():  # Disable gradient computation for inference
+    for i, (image, label) in enumerate(val_loader):
+        if i >= num_images:  # Stop after processing `num_images`
+            break
+        
+        image = image.to(device)
+        
+        # Record start time
+        start_time = time()
+        
+        # Run inference
+        output = model(image)
+        
+        # Record end time
+        end_time = time()
+        
+        # Store inference time
+        times.append(end_time - start_time)
+        
+        # Store the model's output (sigmoid for binary classification)
+        outputs.append(output.sigmoid().cpu().numpy())
+        
+        print(f"Image {i + 1}: Inference time: {times[-1]:.4f} seconds, Output: {outputs[-1]},label: {label}")
+        
+# Calculate average time for inference
+average_time = sum(times) / len(times)
+print(f"\nAverage inference time per image: {average_time:.4f} seconds")
+
+# Optionally, you can write the outputs and times to a file if needed
