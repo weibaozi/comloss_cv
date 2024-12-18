@@ -7,6 +7,7 @@ from cv_bridge import CvBridge, CvBridgeError
 import cv2
 from model import myModel
 from collections import deque
+import argparse
 
 def image_callback(msg,model,state_queue):
     """Callback function to process the image."""
@@ -28,8 +29,7 @@ def image_callback(msg,model,state_queue):
     except CvBridgeError as e:
         rospy.logerr(f"Error converting ROS Image to OpenCV: {e}")
 
-def main():
-    model_path = 'model.pth'
+def main(model_path=None):
     mymodel=myModel(model_path, 'cpu')
     rospy.init_node('image_subscriber', anonymous=True)
     pub = rospy.Publisher('peg_visibility', Bool, queue_size=1)
@@ -57,4 +57,7 @@ def main():
         rate.sleep()
 
 if __name__ == '__main__':
-    main()
+    argparse.ArgumentParser()
+    argparse.add_argument('--model_path', type=str, default='model.pth')
+    args=argparse.parse_args()
+    main(model_path=args.model_path)

@@ -14,3 +14,4 @@ wandb/
 lightning_logs/
 *.zip
 modeleb7.pth
+old_imgs
